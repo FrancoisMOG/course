@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ma Liste de Courses Intelligente</title>
+    <style>
+        /* --- RESET & VARIABLES --- */
+        :root {
+            --primary-color: #2ecc71;
+            --primary-dark: #27ae60;
+            --accent-color: #34495e;
+            --shop-color: #e67e22;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px rgba(0,0,0,0.05);
+            --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding-bottom: 80px;
+        }
+
+        /* --- HEADER --- */
+        header {
+            background-color: var(--card-bg);
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        h1 { font-size: 1.2rem; font-weight: 700; color: var(--accent-color); margin-right: auto; }
+        
+        .actions { display: flex; gap: 8px; }
+
+        .btn {
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.1s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-secondary { background-color: #e0e0e0; color: #333; }
+        .btn-danger { background-color: #ff7675; color: white; }
+        .btn-shop { background-color: var(--shop-color); color: white; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4); }
+
+        /* --- PROGRESS BAR --- */
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: #eee;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* --- MAIN CONTENT --- */
+        main { padding: 1rem; max-width: 1000px; margin: 0 auto; }
+
+        section {
+            margin-bottom: 2rem;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        h2 {
+            font-size: 1.1rem;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- GRID ITEMS --- */
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .item-card {
+            display: flex;
+            align-items: center;
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 8px 12px;
+            transition: background 0.2s;
+        }
+
+        .item-card.checked { background: #e8f5e9; border-color: var(--primary-color); }
+        .item-card.checked .item-name { text-decoration: line-through; color: #888; }
+
+        /* Custom Checkbox */
+        input[type="checkbox"] {
+            appearance: none;
+            min-width: 24px;
+            height: 24px;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            margin-right: 12px;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        input[type="checkbox"]:checked { background-color: var(--primary-color); border-color: var(--primary-color); }
+        input[type="checkbox"]:checked::after {
+            content: '✔'; font-size: 14px; color: white;
+        }
+
+        .item-name { flex-grow: 1; font-weight: 500; font-size: 0.95rem; word-break: break-word; }
+
+        input[type="number"] {
+            width: 50px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-left: 10px;
+        }
+
+        .btn-delete-item {
+            background: none; border: none; color: #ff7675;
+            font-size: 1.2rem; margin-left: 8px; cursor: pointer; padding: 0 5px;
+            display: none; 
+        }
+        .item-card:hover .btn-delete-item, .item-card:focus-within .btn-delete-item { display: block; }
+
+        /* --- ADD ITEM FORM --- */
+        .add-item-form {
+            display: flex;
+            gap: 10px;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px dashed #ccc;
+        }
+        .add-item-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            outline: none;
+        }
+        .add-item-input:focus { border-color: var(--primary-color); }
+
+        /* --- FOOTER / SUMMARY --- */
+        .summary-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            padding: 10px 20px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 99;
+        }
+        .summary-text { font-size: 0.9rem; font-weight: 600; color: #555; }
+
+        /* --- TOAST NOTIFICATION --- */
+        .toast {
+            position: fixed;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(44, 62, 80, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .toast.show { opacity: 1; }
+
+        /* --- MODAL SHOPPING ROUTE (FULL SCREEN) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        .modal-overlay.active { transform: translateY(0); }
+
+        .modal-header {
+            background: var(--shop-color);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .modal-title { font-size: 1.2rem; font-weight: bold; flex-grow: 1; text-align: center; }
+        .close-modal {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            padding: 5px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .modal-content {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background: #fcfcfc;
+        }
+
+        .shop-section-title {
+            color: var(--shop-color);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            margin: 20px 0 10px 0;
+            padding-left: 5px;
+            border-left: 4px solid var(--shop-color);
+            letter-spacing: 1px;
+        }
+
+        .shop-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            font-size: 1.1rem;
+        }
+        .shop-qty {
+            background: var(--shop-color);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .empty-route-msg {
+            text-align: center;
+            color: #999;
+            margin-top: 50px;
+            font-size: 1.1rem;
+        }
+
+        /* --- PRINT STYLES (CORRIGÉ POUR MODE COURSE) --- */
+        @media print {
+            body { background: white; color: black; font-size: 12pt; -webkit-print-color-adjust: exact; }
+            header, .summary-footer, .add-item-form, .btn-delete-item, .toast { display: none !important; }
+            main { display: block !important; padding: 0; max-width: 100%; }
+            #shoppingModal { display: none !important; } 
+
+            section { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; margin-bottom: 10px; padding: 10px; border-radius: 4px; }
+            .items-grid { display: block; }
+            .item-card { border: none; border-bottom: 1px dashed #eee; padding: 5px 0; background: transparent; }
+            .item-card.checked { text-decoration: line-through; color: #999; }
+            input[type="checkbox"] { border: 1px solid #000; width: 15px; height: 15px; margin-right: 10px; appearance: checkbox; -webkit-appearance: checkbox; }
+            input[type="number"] { border: none; background: transparent; text-align: right; width: 30px; }
+            h2 { font-size: 14pt; border-bottom: 2px solid black; margin-top: 10px; }
+            
+            /* --- CORRECTION DU BUG PAGE BLANCHE MODE COURSE --- */
+            
+            /* 1. Masquer tout ce qui est directement dans le body */
+            body.print-shopping-mode > * {
+                display: none !important;
+            }
+
+            /* 2. Forcer l'affichage de la modale et annuler son positionnement flottant */
+            body.print-shopping-mode #shoppingModal {
+                display: block !important;
+                position: static !important; 
+                top: auto !important;
+                left: auto !important;
+                width: 100% !important;
+                height: auto !important;
+                transform: none !important; 
+                z-index: auto !important;
+                overflow: visible !important;
+                background: white !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            
+            /* 3. Masquer l'en-tête de la modale (boutons) */
+            body.print-shopping-mode .modal-header {
+                display: none !important;
+            }
+            
+            /* 4. S'assurer que le contenu de la modale est visible */
+            body.print-shopping-mode .modal-content {
+                display: block !important;
+                padding: 0 !important;
+                overflow: visible !important;
+                background: white !important;
+            }
+            
+            /* 5. Styles visuels pour le PDF Shopping */
+            body.print-shopping-mode::before {
+                content: "Parcours de Courses Optimisé";
+                display: block;
+                text-align: center;
+                font-size: 18pt;
+                font-weight: bold;
+                margin-bottom: 20px;
+                border-bottom: 2px solid black;
+                padding-bottom: 10px;
+            }
+
+            body.print-shopping-mode .shop-section-title {
+                font-size: 13pt;
+                border-bottom: 2px solid black;
+                margin-top: 20px;
+                margin-bottom: 10px;
+                padding-left: 0;
+                border-left: none;
+                color: black;
+                background: #eee; 
+                padding: 5px;
+                break-after: avoid; 
+            }
+            
+            body.print-shopping-mode .shop-item {
+                border: none;
+                border-bottom: 1px dashed #ccc;
+                padding: 8px 0;
+                margin-bottom: 0;
+                display: flex;
+                justify-content: space-between;
+                page-break-inside: avoid; 
+                break-inside: avoid;
+                background: transparent;
+            }
+            
+            body.print-shopping-mode .shop-qty {
+                background: none;
+                color: black;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 2px 6px;
+                font-weight: bold;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Ma Liste</h1>
+    <div class="actions">
+        <button class="btn btn-secondary" onclick="app.resetData()" title="Réinitialiser">↻</button>
+        <button class="btn btn-shop" onclick="app.openShoppingRoute()" title="Voir le parcours magasin">🛒 Mode Course</button>
+        <button class="btn btn-primary" onclick="window.print()" title="Imprimer la liste complète">🖨️ PDF</button>
+    </div>
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+</header>
+
+<main id="appContainer">
+    <!-- Les sections seront générées ici par JavaScript -->
+</main>
+
+<div class="summary-footer">
+    <span class="summary-text" id="summaryText">0 / 0 Achats</span>
+    <button class="btn btn-danger" style="font-size: 0.8rem; padding: 5px 10px;" onclick="app.clearChecked()">Supprimer achetés</button>
+</div>
+
+<!-- Modal Mode Course -->
+<div id="shoppingModal" class="modal-overlay">
+    <div class="modal-header">
+        <button class="close-modal" onclick="app.closeShoppingRoute()">✕</button>
+        <span class="modal-title">🛒 Parcours Optimisé</span>
+        <button class="btn btn-primary" style="background: white; color: var(--shop-color);" onclick="app.printShoppingList()">🖨️ Export PDF</button>
+    </div>
+    <div class="modal-content" id="modalContent">
+        <!-- Liste triée ici -->
+    </div>
+</div>
+
+<div id="toast" class="toast">Message</div>
+
+<script>
+    /**
+     * DONNÉES INITIALES (Mise à jour structurelle)
+     */
+    const DEFAULT_DATA = [
+        {
+            name: "Frigo",
+            items: [
+                { name: "Beurre demi-sel", qty: 1, checked: false },
+                { name: "Fromage Blanc", qty: 1, checked: false },
+                { name: "Margarine", qty: 1, checked: false },
+                { name: "Salade", qty: 1, checked: false },
+                { name: "Beurre doux", qty: 1, checked: false },
+                { name: "Compote en pots", qty: 1, checked: false },
+                { name: "Yaourt", qty: 1, checked: false },
+                { name: "Yaourt Grec", qty: 1, checked: false },
+                { name: "Fromage blanc Pots", qty: 1, checked: false },
+                { name: "Mozzarella", qty: 1, checked: false },
+                { name: "Parmesan", qty: 1, checked: false },
+                { name: "Fromage en tranche", qty: 1, checked: false },
+                { name: "Gruyère râpé", qty: 1, checked: false },
+                { name: "Bûche de chèvre", qty: 1, checked: false },
+                { name: "Feta", qty: 1, checked: false },
+                { name: "Saumon en tranche", qty: 1, checked: false },
+                { name: "Jambon", qty: 1, checked: false },
+                { name: "Blanc de poulet", qty: 1, checked: false },
+                { name: "Blanc de dinde", qty: 1, checked: false },
+                { name: "Lardons fumés", qty: 1, checked: false },
+                { name: "Viande Hachée", qty: 1, checked: false },
+                { name: "Poissons panés Frais", qty: 1, checked: false },
+                { name: "Morceaux de poulet", qty: 1, checked: false },
+                { name: "Haché de saucisse", qty: 1, checked: false },
+                { name: "Pâte à Pizza", qty: 1, checked: false },
+                { name: "Pulco", qty: 1, checked: false },
+                { name: "Crème fraîche", qty: 1, checked: false },
+                { name: "Crème semi-épaisse", qty: 1, checked: false }
+                // Carotte et Betterave retirées (déplacées)
+            ]
+        },
+        {
+            name: "Fruits et légumes", // NOUVELLE SECTION
+            items: [
+                { name: "Pomme", qty: 1, checked: false },
+                { name: "Banane", qty: 1, checked: false },
+                { name: "Citron", qty: 1, checked: false },
+                { name: "Avocats", qty: 1, checked: false },
+                { name: "Oignons", qty: 1, checked: false },
+                { name: "Ail", qty: 1, checked: false },
+                { name: "Carotte", qty: 1, checked: false }, // Déplacé du Frigo
+                { name: "Betterave", qty: 1, checked: false } // Déplacé du Frigo
+            ]
+        },
+        {
+            name: "Congélateur",
+            items: [
+                { name: "Épinards hachés", qty: 1, checked: false },
+                { name: "Frites", qty: 1, checked: false },
+                { name: "Glaces", qty: 1, checked: false },
+                { name: "Brocolis", qty: 1, checked: false },
+                { name: "Poisson pané", qty: 1, checked: false },
+                { name: "Crêpes Jambon/Fromage", qty: 1, checked: false }
+            ]
+        },
+        {
+            name: "Meubles cuisine",
+            items: [
+                { name: "Soupe", qty: 1, checked: false },
+                { name: "Sauce pizza", qty: 1, checked: false },
+                { name: "Petits pois carotte", qty: 1, checked: false },
+                { name: "Maïs", qty: 1, checked: false },
+                { name: "Sauce Bolognaise", qty: 1, checked: false },
+                { name: "Thon", qty: 1, checked: false },
+                { name: "Concentré de tomate", qty: 1, checked: false },
+                { name: "Chorizo", qty: 1, checked: false },
+                { name: "Béchamel", qty: 1, checked: false },
+                { name: "Pois chiche", qty: 1, checked: false },
+                { name: "Ravioli", qty: 1, checked: false },
+                { name: "Biscuits apéro", qty: 1, checked: false },
+                { name: "Pâtes", qty: 1, checked: false },
+                { name: "Riz", qty: 1, checked: false },
+                { name: "Semoule", qty: 1, checked: false },
+                { name: "Wraps", qty: 1, checked: false },
+                { name: "Huile", qty: 1, checked: false },
+                { name: "Huile d'olive", qty: 1, checked: false },
+                { name: "Vinaigre Balsamique", qty: 1, checked: false }
+            ]
+        },
+        {
+            name: "Meuble cuisine sucrée",
+            items: [
+                { name: "Chocolat plaques", qty: 1, checked: false },
+                { name: "Levure", qty: 1, checked: false },
+                { name: "Sucre Vanillé", qty: 1, checked: false },
+                { name: "Farine", qty: 1, checked: false },
+                { name: "Sucre", qty: 1, checked: false },
+                { name: "Sucre glace", qty: 1, checked: false },
+                { name: "Sucre de cannes", qty: 1, checked: false },
+                { name: "Miel", qty: 1, checked: false },
+                { name: "Sirop d’agave", qty: 1, checked: false },
+                { name: "Biscuits", qty: 1, checked: false },
+                { name: "Compote gourde", qty: 1, checked: false },
+                { name: "Beurre de cacahuète", qty: 1, checked: false }
+            ]
+        },
+        {
+            name: "Meuble petit dej",
+            items: [
+                { name: "Céréales", qty: 1, checked: false },
+                { name: "Flocons d’avoine", qty: 1, checked: false },
+                { name: "Chocolat en poudre", qty: 1, checked: false },
+                { name: "Café", qty: 1, checked: false }
+            ]
+        },
+        {
+            name: "Meuble en dessous du four",
+            items: [
+                { name: "Lait", qty: 1, checked: false },
+                { name: "Jus", qty: 1, checked: false },
+                { name: "Coca / Fanta / etc.", qty: 1, checked: false },
+                { name: "Oeufs", qty: 1, checked: false } // AJOUTÉ
+            ]
+        },
+        {
+            name: "Salle de bain et produits ménagers", // NOUVELLE SECTION
+            items: [
+                { name: "Dentifrice", qty: 1, checked: false },
+                { name: "Sac poubelle", qty: 1, checked: false },
+                { name: "Lingettes décoloration", qty: 1, checked: false },
+                { name: "Boîtes de mouchoirs", qty: 1, checked: false },
+                { name: "Papier toilettes", qty: 1, checked: false },
+                { name: "Soppalin", qty: 1, checked: false }
+            ]
+        }
+    ];
+
+    // Ordre des rayons typiques en France
+    const ZONES = [
+        { id: 1, name: "🥬 Fruits & Légumes", keywords: ['salade', 'carotte', 'betterave', 'petits pois', 'maïs', 'brocolis', 'épinards', 'pomme', 'banane', 'citron', 'avocat', 'oignon', 'ail'] },
+        { id: 2, name: "🐟 Poissonnerie", keywords: ['saumon', 'thon', 'poisson'] },
+        { id: 3, name: "🥩 Boucherie / Charcuterie", keywords: ['jambon', 'lardons', 'viande', 'poulet', 'dinde', 'chorizo', 'haché', 'saucisse', 'oeufs'] }, // Oeufs souvent rayon boucherie/charcuterie ou frais
+        { id: 4, name: "🧀 Crèmerie / Fromages", keywords: ['beurre', 'fromage', 'crème', 'yaourt', 'mozzarella', 'feta', 'lait'] },
+        { id: 5, name: "❄️ Surgelés", keywords: ['frites', 'glace', 'surgelé', 'crêpes'] },
+        { id: 6, name: "🥖 Boulangerie / Pain", keywords: ['pâte à pizza', 'pain', 'wraps'] },
+        { id: 7, name: "🍝 Épicerie Salée", keywords: ['pâtes', 'riz', 'semoule', 'soupe', 'sauce', 'conserv', 'biscuits apéro', 'ravioli', 'huile', 'olive', 'vinaigre', 'balsamique'] },
+        { id: 8, name: "🍪 Épicerie Sucrée / Déj", keywords: ['chocolat', 'sucre', 'farine', 'biscuit', 'compote', 'céréales', 'miel', 'levure', 'café'] },
+        { id: 9, name: "🥤 Boissons", keywords: ['jus', 'coca', 'fanta', 'pulco', 'sirop'] },
+        { id: 10, name: "🧻 Hygiène & Ménage", keywords: ['dentifrice', 'sac poubelle', 'lingette', 'mouchoir', 'papier toilette', 'soppalin'] }, // NOUVEAU RAYON
+        { id: 11, name: "📦 Autres", keywords: [] }
+    ];
+
+    class ShoppingListApp {
+        constructor() {
+            this.storageKey = 'shoppingList_v5'; // Version incrémentée pour appliquer les changements de structure
+            this.container = document.getElementById('appContainer');
+            this.modal = document.getElementById('shoppingModal');
+            this.modalContent = document.getElementById('modalContent');
+            this.progressBar = document.getElementById('progressBar');
+            this.summaryText = document.getElementById('summaryText');
+            this.data = this.loadData();
+            this.render();
+        }
+
+        // --- GESTION DES DONNÉES ---
+        loadData() {
+            const stored = localStorage.getItem(this.storageKey);
+            return stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(DEFAULT_DATA));
+        }
+
+        saveData() {
+            localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+            this.updateSummary();
+        }
+
+        resetData() {
+            if(confirm("Voulez-vous vraiment réinitialiser toute la liste ? Les ajouts personnalisés seront perdus.")) {
+                this.data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+                this.saveData();
+                this.render();
+                this.showToast("Liste réinitialisée");
+            }
+        }
+
+        // --- LOGIQUE METIER ---
+        toggleItem(catIndex, itemIndex) {
+            this.data[catIndex].items[itemIndex].checked = !this.data[catIndex].items[itemIndex].checked;
+            this.saveData();
+            this.renderItem(catIndex, itemIndex); 
+            this.updateSummary();
+        }
+
+        updateQuantity(catIndex, itemIndex, value) {
+            const val = parseInt(value);
+            if (val > 0) {
+                this.data[catIndex].items[itemIndex].qty = val;
+                this.saveData();
+            }
+        }
+
+        addItem(categoryIndex, name) {
+            if (!name.trim()) return;
+            const newItem = { name: name.trim(), qty: 1, checked: false, isCustom: true };
+            this.data[categoryIndex].items.push(newItem);
+            this.saveData();
+            this.render(); 
+            this.showToast(`"${name}" ajouté`);
+        }
+
+        deleteItem(catIndex, itemIndex) {
+            if(confirm("Supprimer cet article de la liste ?")) {
+                this.data[catIndex].items.splice(itemIndex, 1);
+                this.saveData();
+                this.render();
+            }
+        }
+
+        clearChecked() {
+            let count = 0;
+            this.data.forEach(cat => {
+                const initialLen = cat.items.length;
+                cat.items = cat.items.filter(item => !item.checked);
+                count += (initialLen - cat.items.length);
+            });
+            
+            if(count > 0) {
+                this.saveData();
+                this.render();
+                this.showToast(`${count} articles supprimés`);
+            } else {
+                this.showToast("Aucun article coché à supprimer");
+            }
+        }
+
+        // --- MODE COURSE (LOGIQUE DE TRI) ---
+        getZoneId(itemName) {
+            const name = itemName.toLowerCase();
+            for (let zone of ZONES) {
+                if (zone.keywords.some(k => name.includes(k))) {
+                    return zone.id;
+                }
+            }
+            return 11; // Autres
+        }
+
+        openShoppingRoute() {
+            let checkedItems = [];
+            this.data.forEach(cat => {
+                cat.items.forEach(item => {
+                    if (item.checked) {
+                        checkedItems.push({ ...item, zoneId: this.getZoneId(item.name) });
+                    }
+                });
+            });
+
+            checkedItems.sort((a, b) => a.zoneId - b.zoneId);
+
+            this.modalContent.innerHTML = '';
+            
+            if (checkedItems.length === 0) {
+                this.modalContent.innerHTML = '<div class="empty-route-msg">Cochez des articles pour voir le parcours !</div>';
+            } else {
+                let currentZoneId = -1;
+                checkedItems.forEach(item => {
+                    if (item.zoneId !== currentZoneId) {
+                        const zoneName = ZONES.find(z => z.id === item.zoneId)?.name || "Autres";
+                        const h3 = document.createElement('h3');
+                        h3.className = 'shop-section-title';
+                        h3.textContent = zoneName;
+                        this.modalContent.appendChild(h3);
+                        currentZoneId = item.zoneId;
+                    }
+
+                    const div = document.createElement('div');
+                    div.className = 'shop-item';
+                    div.innerHTML = `
+                        <span>${item.name}</span>
+                        <span class="shop-qty">x${item.qty}</span>
+                    `;
+                    this.modalContent.appendChild(div);
+                });
+            }
+
+            this.modal.classList.add('active');
+        }
+
+        closeShoppingRoute() {
+            this.modal.classList.remove('active');
+        }
+
+        // --- IMPRESSION MODE COURSE ---
+        printShoppingList() {
+            document.body.classList.add('print-shopping-mode');
+            window.print();
+            setTimeout(() => {
+                document.body.classList.remove('print-shopping-mode');
+            }, 1000);
+        }
+
+        // --- RENDU UI PRINCIPAL ---
+        render() {
+            this.container.innerHTML = '';
+            this.data.forEach((category, catIndex) => {
+                const section = document.createElement('section');
+                
+                const h2 = document.createElement('h2');
+                h2.textContent = category.name;
+                section.appendChild(h2);
+
+                const grid = document.createElement('div');
+                grid.className = 'items-grid';
+                grid.id = `cat-${catIndex}-grid`;
+                
+                category.items.forEach((item, itemIndex) => {
+                    const itemEl = this.createItemElement(item, catIndex, itemIndex);
+                    grid.appendChild(itemEl);
+                });
+                section.appendChild(grid);
+
+                const form = document.createElement('div');
+                form.className = 'add-item-form';
+                form.innerHTML = `
+                    <input type="text" class="add-item-input" placeholder="Ajouter un produit..." id="input-${catIndex}">
+                    <button class="btn btn-secondary" onclick="app.handleAddClick(${catIndex})">+</button>
+                `;
+                section.appendChild(form);
+
+                const input = form.querySelector('input');
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.handleAddClick(catIndex);
+                });
+
+                this.container.appendChild(section);
+            });
+            this.updateSummary();
+        }
+
+        createItemElement(item, catIndex, itemIndex) {
+            const div = document.createElement('div');
+            div.className = `item-card ${item.checked ? 'checked' : ''}`;
+            div.id = `item-${catIndex}-${itemIndex}`;
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = item.checked;
+            checkbox.onclick = () => this.toggleItem(catIndex, itemIndex);
+
+            const span = document.createElement('span');
+            span.className = 'item-name';
+            span.textContent = item.name;
+
+            const qtyInput = document.createElement('input');
+            qtyInput.type = 'number';
+            qtyInput.min = '1';
+            qtyInput.value = item.qty;
+            qtyInput.onchange = (e) => this.updateQuantity(catIndex, itemIndex, e.target.value);
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn-delete-item';
+            delBtn.innerHTML = '&times;';
+            delBtn.onclick = (e) => { e.stopPropagation(); this.deleteItem(catIndex, itemIndex); };
+
+            div.appendChild(checkbox);
+            div.appendChild(span);
+            div.appendChild(qtyInput);
+            div.appendChild(delBtn);
+
+            return div;
+        }
+
+        renderItem(catIndex, itemIndex) {
+            const itemData = this.data[catIndex].items[itemIndex];
+            const oldEl = document.getElementById(`item-${catIndex}-${itemIndex}`);
+            if (oldEl) {
+                const newEl = this.createItemElement(itemData, catIndex, itemIndex);
+                oldEl.replaceWith(newEl);
+            }
+        }
+
+        handleAddClick(catIndex) {
+            const input = document.getElementById(`input-${catIndex}`);
+            this.addItem(catIndex, input.value);
+            input.value = ''; 
+            input.focus();
+        }
+
+        updateSummary() {
+            let total = 0;
+            let checked = 0;
+            this.data.forEach(cat => {
+                cat.items.forEach(item => {
+                    total++;
+                    if (item.checked) checked++;
+                });
+            });
+
+            const percent = total === 0 ? 0 : (checked / total) * 100;
+            this.progressBar.style.width = `${percent}%`;
+            this.summaryText.textContent = `${checked} / ${total} Achetés`;
+        }
+
+        showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+    }
+
+    const app = new ShoppingListApp();
+
+</script>
+</body>
+</html>
